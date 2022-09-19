@@ -1,0 +1,60 @@
+---
+output: html_document
+---
+```{r init, echo = FALSE, include = FALSE}
+library(here)
+library(stars)
+library(knitr)
+library(kableExtra)
+border <- st_as_sf(read_stars(here("output", "border_island.tif")))
+current <- st_crop(read_stars(here("output", "current_chelsaNC.tif")), border)
+env <- st_crop(read_stars(here("output", "environ_allNC.tif")), border)
+Min_env <- rep(0, st_dimensions(env)$band$to)
+names(Min_env) <- st_dimensions(env)$band$values
+Max_env <- Min_env
+names(Max_env) <- st_dimensions(env)$band$values
+for (i in 1:st_dimensions(env)$band$to) {
+  Min_env[i] <- min(env[,,,i][[1]], na.rm = TRUE)
+  Max_env[i] <- max(env[,,,i][[1]], na.rm = TRUE)
+}
+Min_cur <- rep(0, st_dimensions(current)$band$to)
+names(Min_cur) <- st_dimensions(current)$band$values
+Max_cur <- Min_cur
+names(Max_cur) <- st_dimensions(current)$band$values
+for (i in 1:st_dimensions(current)$band$to) {
+  Min_cur[i] <- min(current[,,,i][[1]], na.rm = TRUE)
+  Max_cur[i] <- max(current[,,,i][[1]], na.rm = TRUE)
+}
+Min_cur_one <- c(min(Min_cur[1:12]), min(Min_cur[13:24]), min(Min_cur[25:36]), min(Min_cur[37:48]), min(Min_cur[49:60]), min(Min_cur[61:72]), Min_cur[73:93])
+names(Min_cur_one) <- c("T_min", "T_max", "T_mean", "prec", "Couverture nuageuse", "PET_penman", names(Min_cur)[73:93])
+Max_cur_one <- c(max(Max_cur[1:12]), max(Max_cur[13:24]), max(Max_cur[25:36]), max(Max_cur[37:48]), max(Max_cur[49:60]), max(Max_cur[61:72]), Max_cur[73:93])
+names(Max_cur_one) <- names(Min_cur_one)
+Min <- c(Min_env, Min_cur_one)
+Max <- c(Max_env, Max_cur_one)
+source <- c("https://forobs.jrc.ec.europa.eu/TMF/data.php",
+            "https://srtm.csi.cgiar.org/", # elevation & more
+            "https://srtm.csi.cgiar.org/",
+            "https://srtm.csi.cgiar.org/",
+            "https://srtm.csi.cgiar.org/",
+            "https://srtm.csi.cgiar.org/", 
+            "https://soilgrids.org/", # soilgrids
+            "https://forobs.jrc.ec.europa.eu/TMF/data.php", # dist Forest
+            "https://www.openstreetmap.org", # sea
+            "https://www.openstreetmap.org", # road
+            "https://www.openstreetmap.org", # place
+            "https://www.openstreetmap.org", # water
+            "https://www.protectedplanet.net/en",
+            "https://georep.nc",
+            "https://georep.nc",
+            rep("https://chelsa-climate.org/", 27)
+            )
+minmax <- cbind(Min, Max, source)
+write_csv(data.frame(minmax), file = here("output", "plot", "minmax.csv"), col_names = TRUE)
+
+```
+
+
+```{r, echo = FALSE}
+kable(minmax) %>%
+  kable_styling(latex_options = c("striped", "scale_down"), font_size = 12)
+```

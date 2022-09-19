@@ -1,0 +1,133 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(here)
+library(stars)
+library(plotly)
+library(terra)
+library(ggtern)
+library(rayshader)
+library(rgl)
+library(graphics)
+knit_hooks$set(webgl = hook_webgl)
+
+##=========== Init
+set.seed(1234)
+EPSG <- 3163
+nodat <- -9999
+ISO_country_code <- "NCL"
+proj.t <- paste0("EPSG:", EPSG) 
+PA <- read.csv2(here("data_raw", "NCpippn", "Presence_Absence.csv"), sep = ",")
+PA$X <- NULL
+Ab <- read.csv2(here("data_raw", "NCpippn", "Abondance.csv"), sep = ",")
+Ab$X <- NULL
+dir.create(here("output", "plot"))
+
+# Keep only Grande Terre ie main island
+border <- read_sf(here("data_raw", "Grande_Terre", "Grande_Terre.shp"))[1]
+border <- st_transform(border, EPSG)
+
+elevation <- st_crop(read_stars(here("data_raw", "srtm_v1_4_90m", "elevation_1km.tif")), border)
+elevation[[1]][elevation[[1]] < 10] <- NA
+forest <- split(read_stars(here("output", "environNC.tif")))[1,,]
+forest[forest < 50] <- NA
+# crop forest on elevation more than 10m
+forest <- st_crop(st_crop(forest, elevation), border)
+forest <- st_as_sf(forest)
+# crop dry forest
+# https://doi.org/10.1371/journal.pone.0252063
+current <- split(read_stars(here("output", "current_chelsaNC.tif")))
+bio12 <- st_crop(st_crop(current[84,,], elevation), forest) # bio12
+prec <- merge(st_crop(st_crop(current[37:48,,], elevation), forest))
+bio12[[1]][bio12[[1]] < 1500] <- 1 # dry
+bio12[[1]][bio12[[1]] >= 1500] <- 0
+prec[[1]][prec[[1]] < 100] <- 1 # dry
+prec[[1]][prec[[1]] >= 100] <- 0 
+for (i in 2:12) {
+  prec[[1]][,,1] <- prec[[1]][,,1] + prec[[1]][,,i]
+}
+dry_forest <- bio12 * prec[,,,1]
+dry_forest[[1]][dry_forest[[1]] > 5] <- NA # remove dry forest
+forest <- st_as_sf(dry_forest) # new mask for moist forest 
+```
+
+
+```{r plot3d 1,echo = FALSE, webgl = TRUE}
+##=============
+
+RGB <- round(st_crop(read_stars(here("output", "RGB_group_forest.tif")), forest)[[1]])
+RGB_hex <- RGB[,,1]
+for (i in 1:dim(RGB_hex)[1]) {
+  for (j in 1:dim(RGB_hex)[2]) {
+    if (sum(is.na(RGB[i, j,])) == 0){
+      RGB_hex[i, j] <- rgb2hex(round(RGB[i, j, 1]), round(RGB[i, j, 2]), round(RGB[i, j, 3]))    
+    }
+  }
+}
+cell <- which(!is.na(RGB_hex), arr.ind = TRUE)
+
+elevation <- st_crop(read_stars(here("data_raw", "srtm_v1_4_90m", "elevation_1km.tif")),forest)
+elev_mat <- elevation[[1]]
+
+##
+data <- data.frame(cell)
+data$elev <- elev_mat[cell]
+data$RGB <- RGB_hex[cell]
+colnames(data) <- c("x", "y", "elev", "col")
+plot3d(data$x, data$y, data$elev, col = data$col, xlab = "x", ylab = "y", zlab = "altitude")
+plot3d(tSNE_df$V1, tSNE_df$V2, tSNE_df$V3, col = col, xlab = "x", ylab = "y", zlab = "altitude") # UM in tSNE 3D
+
+```
+```{r plot_ly, echo = FALSE}
+plot_ly(data.frame(RGB))
+x <- seq_len(nrow(RGB))
+y <- seq_len(ncol(RGB)) 
+elev_all <- st_crop(read_stars(here("data_raw", "srtm_v1_4_90m", "elevation_1km.tif")), border)[[1]]
+plot_ly() %>% add_surface(x = ~x, y = ~y, z = ~elev_all )
+```
+
+# test 2
+## plot degueu
+{r persp, echo = FALSE}
+col <- RGB[,,1] + RGB[,,2] + RGB[,,3]
+rgb <- unique(c(RGB[,,1] + RGB[,,2] + RGB[,,3]))
+c <- c(NA, "#a020f0", "#ffa500", "#0000ff", "#006400", "#ffff00", "#000000", "#ff0000")
+c <- c(NA, "blue", "green", "red", "yellow", "black", "purple","orange")
+for (i in 1:length(rgb)) {
+  col[RGB[,,1] + RGB[,,2] + RGB[,,3] == rgb[i]] <- c[i]
+}
+col[is.na(col)] <- "white"
+persp(x = 10 * 1:dim(elev_mat)[1], y = 10 * 1:dim(elev_mat)[2], z = elev_mat, col = col, theta = 135, phi = 30, ltheta = -120, shade = 0.75, scale = FALSE, border = NA, box = FALSE)
+z = volcano
+col <- z
+col[z > 130] <- "red"
+col[z < 130] <- "blue"
+persp3d(10 * 1:100,10 * 1:dim(z)[2], elev_mat[1:87,1:61], theta = 135, phi = 30, col =  col[1:87,1:61], scale = FALSE,
+      ltheta = -120, shade = 0.75, border = NA, box = FALSE)
+
+
+levelpersp <- function(x, y, z, colors=topo.colors, ...) {
+  ## getting the value of the midpoint
+  zz <- (z[-1,-1] + z[-1,-ncol(z)] + z[-nrow(z),-1] + z[-nrow(z),-ncol(z)])/4
+  ## calculating the breaks
+  breaks <- hist(zz, plot=FALSE)$breaks
+  ## cutting up zz
+  cols <- colors(length(breaks)-1)
+  zzz <- cut(zz, breaks=breaks, labels=cols)
+  ## plotting
+  persp(x, y, z, col=as.character(zzz), ...)
+  ## return breaks and colors for the legend
+  list(breaks=breaks, colors=cols)
+}
+
+
+## Example
+x <- 1:317
+y <- 1:257
+f <- function(x,y) { r <- sqrt(x^2+y^2); 10 * sin(r)/r }
+z <- elev_mat
+levelpersp(x, y, z, theta = 30, phi = 30, expand = 0.5, border = NA)
+```

@@ -1,0 +1,101 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(here)
+library(stars)
+library(plotly)
+library(terra)
+library(ggtern)
+library(rayshader)
+library(rgl)
+library(stringr)
+library(viridis)
+knit_hooks$set(webgl = hook_webgl)
+
+##=========== Init
+# set.seed(1234)
+EPSG <- 3163
+nb_class <- 6
+# nodat <- -9999
+# ISO_country_code <- "NCL"
+# proj.t <- paste0("EPSG:", EPSG) 
+# PA <- read.csv2(here("data_raw", "NCpippn", "Presence_Absence.csv"), sep = ",")
+# PA$X <- NULL
+# Ab <- read.csv2(here("data_raw", "NCpippn", "Abondance.csv"), sep = ",")
+# Ab$X <- NULL
+# dir.create(here("output", "plot"))
+
+# Keep only Grande Terre ie main island
+border <- read_sf(here("data_raw", "Grande_Terre", "Grande_Terre.shp"))[1]
+border <- st_transform(border, EPSG)
+
+elevation <- st_crop(read_stars(here("data_raw", "srtm_v1_4_90m", "elevation_1km.tif")), border)
+elevation[[1]][elevation[[1]] < 10] <- NA
+forest <- split(read_stars(here("output", "environNC.tif")))[1,,]
+forest[forest < 50] <- NA
+# crop forest on elevation more than 10m
+forest <- st_crop(st_crop(forest, elevation), border)
+forest <- st_as_sf(forest)
+# crop dry forest
+# https://doi.org/10.1371/journal.pone.0252063
+current <- split(read_stars(here("output", "current_chelsaNC.tif")))
+bio12 <- st_crop(st_crop(current[84,,], elevation), forest) # bio12
+prec <- merge(st_crop(st_crop(current[37:48,,], elevation), forest))
+bio12[[1]][bio12[[1]] < 1500] <- 1 # dry
+bio12[[1]][bio12[[1]] >= 1500] <- 0
+prec[[1]][prec[[1]] < 100] <- 1 # dry
+prec[[1]][prec[[1]] >= 100] <- 0 
+for (i in 2:12) {
+  prec[[1]][,,1] <- prec[[1]][,,1] + prec[[1]][,,i]
+}
+dry_forest <- bio12 * prec[,,,1]
+dry_forest[[1]][dry_forest[[1]] > 5] <- NA # remove dry forest
+forest <- st_as_sf(dry_forest) # new mask for moist forest 
+elevation <- st_crop(read_stars(here("data_raw", "srtm_v1_4_90m", "elevation_1km.tif")),forest)
+elev_mat <- elevation[[1]]
+```
+
+
+```{r plot3d_group, echo = FALSE, webgl = TRUE}
+load(here("output", "RData", "pca_tSNE.RData"))
+RGB_forest_PCA <- read_stars(here("output", "RGB_forest_PCA.tif"))[[1]]
+cell <- which(!is.na(RGB_forest_PCA[,,1]), arr.ind = TRUE)
+data <- data.frame(cell)
+data$elev <- elev_mat[cell]
+data$col_tSNE <- tSNE_site_group
+data$col_hex <- 0
+for (j in 1:length(data$col_hex)) {
+  hex <- round(RGB_forest_PCA[cell[j, 1], cell[j, 2], ])
+  data$col_hex[j] <- rgb2hex(hex[1], hex[2], hex[3])
+}
+viri <- viridis(nb_class)
+col <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2")
+for (i in 1:nb_class) {
+  data$col_tSNE[data$col_tSNE == i] <-col[i]  # viri[i]
+}
+colnames(data) <- c("x", "y", "elev", "col_tSNE", "col_hex")
+
+plot3d(data$x, data$y, data$elev, col = data$col_tSNE, xlab = "longitude", 
+       ylab = "latitude", zlab = "altitude", axes = FALSE)
+bgplot3d({
+  plot.new()
+  title(main = " Tree communities with KM groups \n with tSNE", line = 1)
+})
+rgl.snapshot(here("output", "plot", "plot3d_group.png"), fmt = 'png', top = TRUE)
+
+plot3d(data$x, data$y, data$elev, col = data$col_hex, xlab = "longitude", ylab = "latitude", zlab = "altitude")
+bgplot3d({ 
+  plot.new()
+  title(main = "Axes factoriel sous format RGB", line = 1)
+})
+```
+
+```{r plot3d_UM_tSNE, echo = FALSE, webgl = TRUE}
+load(file = here("output", "RData", "plot3d_UM.RData"))
+plot3d(tSNE_df$V1, tSNE_df$V2, tSNE_df$V3, col = col3d_UM, xlab = "x", ylab = "y", zlab = "altitude")
+legend3d("bottomright", legend = c("Ultramafic", "No Ultramafic"), pch = 16, col = viridis(2), inset = c(0.02))
+
+```
