@@ -654,35 +654,41 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
 ##
 ##================
 
-species_to_plot <- "Acropogon.macrocarpus"
-theta <- read_stars(here("output", "theta", "KNN_theta_forest_01.tif"))
-latlong <- read.csv2(here("data_raw", "NCpippn", "coord_site.csv"), sep = ",")
-latlong$X <- NULL
-coord <- matrix(as.numeric(unlist(latlong)), nrow = nrow(latlong))[,2:3]
-NC_PIPPN <- read.csv2(here("data_raw", "NCpippn", "data_clear.csv"), sep = ",")
+plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_stars), country_name = NULL, country_sf = NULL,
+                                  display_plot = TRUE, save_plot = FALSE){
+  #' Create plot with probabilities of presence interpolated for a choosen species. Plot can be hide and/or save in plot folder
+  #' 
+  #' @param theta_stars multilayer stars_object. from files save in prob_est_species_forest function.
+  #' @param species_to_plot character. name of one layer of @param theta_stars , default is first one.
+  #' @param country_name character. optional, for display border of country on map, default is NULL.
+  #' @param country_sf sf object. optional, inconsistent with @param country_name. Display borders on map, default is NULL.
+  #' @param display_plot boolean. Display plot, default is TRUE.
+  #' @param save_plot boolean. Save plot in .png format in folder plot, default is FALSE.
+  
+  if (!is.null(country_name) & !is.null(country_sf)){
+    print("Only country_name or country_sf")
+    break
+  }
+  gplot <- ggplot()  
+  if(!is.null(country_name)){
+    gplot <- gplot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                             colour = "black", fill = "grey") 
+  }
+  if(!is.null(country_sf)){
+    gplot <- gplot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+  }
+  gplot <- gplot + geom_stars(data = theta) +
+    ggtitle(paste('Interpolated current probabilities of presence \n for', species_to_plot)) +
+    scale_fill_gradientn(colours = rev(rocket(9)), na.value = "transparent") +
+    coord_fixed() +
+    theme_bw() +
+    labs(fill = "Number of species") +
+    theme(plot.title = element_text(hjust = 0.5))
+  if (display_plot){gplot}
+  ggsave(plot = gplot, here("plot", paste0("interpolated_presence_for", species_to_plot, ".png")))
+}
 
 
-# Observed presence absence
-id_pres <- which(PA[, species_to_plot] == 1)
-obs_pres <- data.frame(lat = coord[id_pres, 2], long = coord[id_pres, 1])
-obs_pres <- st_as_sf(obs_pres, coords = c("long", "lat"), crs = 3163)
-
-# Plotting for one specie
-save(theta, species_to_plot, file = here("output", "RData", "interpolated_current_specie.RData"))
-load(here("output", "RData", "interpolated_current_specie.RData"))
-GT <- readOGR(here("data_raw", "Grande_Terre", "Grande_Terre.shp"))
-
-ggplot() + 
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "grey") +
-  geom_stars(data = theta) +
-  ggtitle(paste('Interpolated current probabilities of presence \n for', species_to_plot)) +
-  # geom_sf(data = obs_pres, shape = 3, color = "white", size = 2) 
-  scale_fill_gradientn(colours = rev(rocket(5)), na.value = "transparent") +
-  coord_fixed() +
-  theme_bw() +
-  labs(fill = "Number of species") +
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave(here("output", "plot", "interpolated_presence_for_acropogon_NC.png"))
 
 ##================
 ##
