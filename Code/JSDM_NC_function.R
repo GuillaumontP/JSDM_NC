@@ -48,7 +48,7 @@ reproject_sf_stars <- function(EPSG = 3163, sf_stars_object){
   #' 
   #' @param EPSG target EPSG, default 3163
   #' @param sf_stars_object sf or stars object to reproject
-  #' @return same object then @param sf_stars_object with @param EPSG projection
+  #' @return same object then  `sf_stars_object` with `EPSG` projection
   
   sf_stars_object <- st_transform(sf_stars_object, EPSG)
  
@@ -63,7 +63,7 @@ create_sf_forest <- function(EPSG = 3163, altitude_min = 0, percentage_min = 50,
   #' @param percentage_min int. percentage minimal of forest to consider pixels as forest, default 50
   #' @param elevation stars object. output of "read_stars" of "stars" library with elevation in meters
   #' @param forest stars object. output of "read_stars" of "stars" library with percentage of forest
-  #' @return sf object. with only forest higher than @param altitude_min & @param percentage_min
+  #' @return sf object. with only forest higher than `altitude_min` & `percentage_min`
   
   elevation <- reproject_sf_stars(EPSG = EPSG, sf_object = elevation)
   elevation[[1]][elevation[[1]] < 10] <- NA
@@ -111,13 +111,14 @@ write_stars(c(st_normalize(st_crop(read_stars(here("output", "environ_allNC.tif"
               along = "band"), dsn = here("output", "dataNC.tif"), 
             options = c("COMPRESS=LZW","PREDICTOR=2"), NA_value = nodat)
 
-extract_var_JSDM <- function(stars_object, variables_names, power_variable = rep(1, length(variables_names)), scale = rep(TRUE, length(variables_names))){
+extract_var_JSDM <- function(stars_object, variables_names, power_variable = rep(1, length(variables_names)), 
+                             scale = rep(TRUE, length(variables_names))){
   #' Extract layers and create power wanted of each variable 
   #' 
   #' @param stars_object stars object. output of "read_stars" of "stars" library with layer's names.
   #' @param variables_names a character vector. of layer's name needed
-  #' @param power_variable int vector same length then @param variables_names . maximal power needed for each variable 
-  #' @param scale boolean vector same length then @param variables_names . scale variables and its power
+  #' @param power_variable int vector same length then `variables_names` . maximal power needed for each variable 
+  #' @param scale boolean vector same length then `variables_names` . scale variables and its power
   #' @return stars object with only variables and power asked.
   
   if( length(variables_names) != length(power_variable)){
@@ -153,10 +154,10 @@ data_JSDM <- function(EPSG = 3163, latlon_site, area_site, path_tiff, log_area_s
   #'
   #' @param EPSG int. target EPSG, default 3163
   #' @param latlon_site float matrix with 2 columns. Columns are latitude and longitude in this order.
-  #' @param area_site float vector same dimension then number of row @param latlon. area of each site in m²
+  #' @param area_site float vector same dimension then number of row `latlon`. area of each site in m²
   #' @param path_tiff character. path to Tiff file
   #' @param log_area_site boolean. Replace area of each site by log area of each site. Anyway, this variable is scale.
-  #' @return matrix with latitude, longitude and all variables. If @param latlon_site has row names, output has same row name. 
+  #' @return matrix with latitude, longitude and all variables. If `latlon_site` has row names, output has same row name. 
   
   if (dim(latlon_site)[1] != length(area_site)){
     print("number of rows in latlon is different than lengh of area_site")
@@ -191,11 +192,12 @@ data_JSDM <- function(EPSG = 3163, latlon_site, area_site, path_tiff, log_area_s
 ## about 1h to run
 ##================
 
-JSDM_bino_pro <- function(presence_data, site_data, n_latent = 0, V_beta, mu_beta, nb_species_plot = 2, display_plot = TRUE, save_plot = FALSE){
+JSDM_bino_pro <- function(presence_data, site_data, n_latent = 0, V_beta, mu_beta, nb_species_plot = 2,
+                          display_plot = TRUE, save_plot = FALSE){
   #' Run jSDM_binomial_probit from jSDM package and plot results for some species. Plots can be display and/or save.
   #'
   #' @param presence_data int matrix. Presence Absence for each species (col) on each site (row). Avoid empty row or column
-  #' @param site_data float matrix. Explanatories variables for each site without missing values. Same number of row than number of row in @param presence_data
+  #' @param site_data float matrix. Explanatories variables for each site without missing values. Same number of row than number of row in `presence_data`
   #' @param n_latent int. number of latent variables to use in the model, default is 0.
   #' @param V_beta float vector. Variances of Normal priors for the beta parameters.
   #' @param mu_beta float vector. Means of Normal priors for the beta parameters.
@@ -220,8 +222,6 @@ JSDM_bino_pro <- function(presence_data, site_data, n_latent = 0, V_beta, mu_bet
     seed = 1234,
     verbose = 1
   )
-  dir.create(here("RData"))
-  save(jSDM_binom_pro, file = here("RData", "jSDM_binom_pro.RData"))
   
   top_species <- which(colSums(PA) >= sort(colSums(PA), decreasing = TRUE)[nb_species_plot])
   np <- nrow(jSDM_binom_pro$model_spec$beta_start)
@@ -237,6 +237,7 @@ JSDM_bino_pro <- function(presence_data, site_data, n_latent = 0, V_beta, mu_bet
       z = recordPlot()
       dev.off((1 - display_plot) * 2)
       if (save_plot){
+        dir.create(here("plot"), showWarnings = FALSE)
         png(here("plot", paste0("beta_jSDM_", p, ".png")))
         replayPlot(z)
         dev.off()
@@ -349,7 +350,7 @@ plot_pres_est_one_species <- function(jSDM_binom_pro, species_to_plot = colnames
   #' @param species_to_plot character. species to plot, default is the first species of the list.
   #' @param coord_site dataframe. columns name must contain latitude and longitude as names.
   #' @param country_name character. English name of the country where are inventory sites, default is NULL.
-  #' @param latlon_output float vector. inconsistent with @param country_name coord of output box is this format {lon_min, lat_min, lon_max, lat_max}, default is NULL.
+  #' @param latlon_output float vector. inconsistent with `country_name` coord of output box is this format {lon_min, lat_min, lon_max, lat_max}, default is NULL.
   #' @param display_plot boolean. show plot, default is TRUE.
   #' @param save_plot boolean. Write plot in plot folder as .png files, default is FALSE.
  
@@ -411,7 +412,7 @@ plot_species_richness <- function(jSDM_binom_pro, coord_site, country_name = NUL
   #' @param jSDM_binom_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library
   #' @param coord_site dataframe. columns name must contain latitude and longitude as names.
   #' @param country_name character. English name of the country where are inventory sites, default is NULL.
-  #' @param latlon_output float vector. inconsistent with @param country_name coord of output box is this format {lon_min, lat_min, lon_max, lat_max}, default is NULL.
+  #' @param latlon_output float vector. inconsistent with `country_name` coord of output box is this format {lon_min, lat_min, lon_max, lat_max}, default is NULL.
   #' @param display_plot boolean. show plot, default is TRUE.
   #' @param save_plot boolean. Write plot in plot folder as .png files, default is FALSE.
   
@@ -558,8 +559,8 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
   #' @param alpha_stars stars object. with centered values in 0.
   #' @param latent_var_stars multilayer stars object. with as layer as latent variables. Make sure each latent variable is scale.
   #' @param jSDM_binom_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library.
-  #' @param data_stars multilayer stars object. with same explanatories variables whom in @param jSDM_binom_pro . Make sure your explanatories variable are scale.
-  #' @param area_stars stars object. with values of pixel size with same scale parameters used in @param jSDM_binom_pro .
+  #' @param data_stars multilayer stars object. with same explanatories variables whom in `jSDM_binom_pro`. Make sure your explanatories variable are scale.
+  #' @param area_stars stars object. with values of pixel size with same scale parameters used in `jSDM_binom_pro`.
   
   dir.create(here("output"))
   dir.create(here("output", "theta"))
@@ -636,13 +637,14 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
   
   first.species <- seq(1, n_species, by = floor(n_species / npart) + 1)
   for (n in 1:npart){
-    # change RST by knn
     probit_theta <- predfun(data_stars, params_species, alpha_stars, latent_var_stars,
                             species.range = c(first.species[n], min(n_species, first.species[n] + floor(n_species / npart))))
     theta <- probit_theta
     for (j in 1:length(theta)) {
       theta[[1]][j,,] <- pnorm(theta[[1]][j,,])
     }
+    dir.create(here("output"), showWarnings = FALSE)
+    dir.create(here("output", "theta"), showWarnings = FALSE)
     write_stars(theta, options = c("COMPRESS=LZW", "PREDICTOR=2"), 
                 dsn = here("output", "theta", paste0("KNN_theta_", str_pad(n, width = 2, pad = "0"), ".tif")))
   }
@@ -654,14 +656,14 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
 ##
 ##================
 
-plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_stars), country_name = NULL, country_sf = NULL,
+plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_stars)[1], country_name = NULL, country_sf = NULL,
                                   display_plot = TRUE, save_plot = FALSE){
   #' Create plot with probabilities of presence interpolated for a choosen species. Plot can be hide and/or save in plot folder
   #' 
   #' @param theta_stars multilayer stars_object. from files save in prob_est_species_forest function.
-  #' @param species_to_plot character. name of one layer of @param theta_stars , default is first one.
+  #' @param species_to_plot character. name of one layer of `theta_stars`, default is first one.
   #' @param country_name character. optional, for display border of country on map, default is NULL.
-  #' @param country_sf sf object. optional, inconsistent with @param country_name. Display borders on map, default is NULL.
+  #' @param country_sf sf object. optional, inconsistent with `country_name`. Display borders on map, default is NULL.
   #' @param display_plot boolean. Display plot, default is TRUE.
   #' @param save_plot boolean. Save plot in .png format in folder plot, default is FALSE.
   
@@ -684,11 +686,13 @@ plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_sta
     theme_bw() +
     labs(fill = "Number of species") +
     theme(plot.title = element_text(hjust = 0.5))
-  if (display_plot){gplot}
-  ggsave(plot = gplot, here("plot", paste0("interpolated_presence_for", species_to_plot, ".png")))
+  gplot
+  dev.off((1 - display_plot) * 2)
+  if (save_plot){
+    dir.create(here("plot"), showWarnings = FALSE)
+    ggsave(plot = gplot, here("plot", paste0("interpolated_presence_for", species_to_plot, ".png")))
+  }
 }
-
-
 
 ##================
 ##
@@ -696,147 +700,156 @@ plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_sta
 ##
 ##================
 
-list_theta <- list.files(here("output", "theta"), pattern = "KNN_theta_forest", full.names = TRUE)
-theta_sum <- sum(rast(list_theta[1]))
-npart <- length(list_theta)
-for (i in list_theta[2:npart])
-{
-  theta_sum <- theta_sum + sum(terra::rast(i))
+plot_species_richness_interpolated <- function(list_theta_path, country_name = NULL, 
+                                               country_sf = NULL, display_plot = TRUE, save_plot = FALSE, save_tif = FALSE){
+  #' Create plot with species richness with optional sf border.
+  #'
+  #' @param list_theta_path character vector. with full path of Tiff files who contain probabilities of presence of each species to consider.
+  #' @param country_name character. optional, for display border of country on map, default is NULL.
+  #' @param country_sf sf object. optional, inconsistent with `country_name`. Display borders on map, default is NULL.
+  #' @param display_plot boolean. Display plot, default is TRUE.
+  #' @param save_plot boolean. Save plot in .png format in folder plot, default is FALSE.
+  #' @param save_tif boolean. Save species richness in .tif file in folder output, default is FALSE.
+  #' @return terra object. species richness in designated area.
+  
+  theta_sum <- sum(terra::rast(list_theta_path[1]))
+  n_files <- length(list_theta_path)
+  if (n_files > 1){
+    for (i in list_theta_path[2:n_files])
+    {
+      theta_sum <- theta_sum + sum(terra::rast(i))
+    }
+  }
+  if (save_tif){
+    dir.create(here("output"), showWarnings = FALSE)
+    terra::writeRaster(theta_sum, here("output", "species_richness.tif"), overwrite = TRUE)
+  }
+  gplot <- ggplot()
+  if(!is.null(country_name)){
+    gplot <- gplot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                             colour = "black", fill = "grey") 
+  }
+  if(!is.null(country_sf)){
+    gplot <- gplot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+  }
+  gplot <- gplot + geom_stars(data = theta_sum) +
+    ggtitle("Estimated current species richness") +
+    scale_fill_gradientn(colours = rev(rocket(5)), na.value = "transparent") +
+    coord_fixed() +
+    theme_bw() +
+    labs(fill = "Number of species") + 
+    theme(plot.title = element_text(hjust = 0.5))
+  if (save_plot){
+    dir.create(here("plot"), showWarnings = FALSE)
+    ggsave(here("plot", "estimated_species_richness_forest.png"))
+  }
+  return(theta_sum)
 }
-terra::writeRaster(theta_sum, here("output", "theta_forest_sum.tif"), overwrite = TRUE)
-theta_sum <- read_stars(here("output", "theta_forest_sum.tif"))
-GT <- readOGR(here("data_raw", "Grande_Terre", "Grande_Terre.shp"))
 
-ggplot() + 
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "grey") +
-  geom_stars(data = theta_sum) +
-  ggtitle("Estimated current species richness") +
-  scale_fill_gradientn(colours = rev(rocket(5)), na.value = "transparent") +
-  coord_fixed() +
-  theme_bw() +
-  labs(fill = "Number of species") + 
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave(here("output", "plot", "estimated_species_richness_forest.png"))  
 
 ##================
 ##
 ## Init PCA and tSNE
 ## 
 ##================
-
-# get all cells for PCA
-theta_stars <- read_stars(here("output", "theta", "KNN_theta_forest_01.tif"))[[1]]
-ultramafic <- st_crop(read_stars(here("output", "environ_allNC.tif"))[,,,15], forest)[[1]]
-theta <- terra::rast(here("output", "theta", "KNN_theta_forest_01.tif"))
-nb_cell <- dim(values(theta, na.rm = TRUE))
-theta_matrix <- matrix(0, nrow = nb_cell[1], ncol = nb_cell[2])
-cell <- matrix(0, ncol = 2, nrow = dim(theta_matrix)[1])
-UM <- rep(-1, dim(theta_matrix)[1])
-increment <- 1
-for (x in 1:dim(theta_stars)[1])
-{
-  for (y in 1:dim(theta_stars)[2]) 
-  {
-    if ( sum(is.na(theta_stars[x,y,])) == 0)
-    {
-      cell[increment,] <- c(x, y)
-      theta_matrix[increment,] <- theta_stars[x,y,]
-      UM[increment] <- ultramafic[x, y, 1]
-      increment <- increment + 1
+PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_path, var_exp_stars = NULL, display_plot = TRUE, save_plot = FALSE){
+  #' Run PCA or tSNE on pixels with as coordinates, probabilities of presence of species. Plot Axis 1 vs axis 2, axis 2 vs axis 3 and dendrogram. Possibility to hide plot and save it in .png.
+  #'
+  #' @param tSNE boolean. compute tSNE reduction of dimensions algorithm. If TRUE, `PCA` must be FALSE, default is TRUE.
+  #' @param PCA boolean. compute PCA reduction of dimensions algorithm. If TRUE, `tSNE` must be FALSE, default is FALSE.
+  #' @param list_theta_path character vector.  with full path of Tiff files who contain probabilities of presence of each species to consider.
+  #' @param var_exp_stars multilayer stars object. optional, only consider if `PCA` = TRUE. Plot as supplementary variables, default is NULL.
+  #' @param display_plot boolean. Show plot, default is TRUE.
+  #' @param save_plot boolean. Save plots in plot folder with png format.
+  #' @return float matrix. with as much row as number of pixels and 3 columns for tSNE algorithm and as columns as number of axis with more than 1% of explained variance for PCA.
+  
+  if (tSNE * PCA){
+    print("Chose only one among tSNE and PCA")
+    break
+  }
+  cell <- which(!is.na(split(read_stars(list_theta_path[1]))[[1]]), arr.ind = TRUE)[, 1:2] # keep only x & y axis
+  matrix_values <- NULL
+  for (i in list_theta_path) { 
+    # create matrix with probabilities for all species on each pixels
+    matrix_values <- cbind(matrix_values, values(rast(i)))
+  }
+  if (tSNE){
+    tSNE_fit <- Rtsne(scale(matrix_values), dims = 3, max_iter = 5000, num_threads = 0,
+                      verbose = TRUE)
+    site_df <- as.data.frame(tSNE_fit$Y)
+    dist_site <- dist(site_df)
+    axis1_2 <- ggplot(data = tSNE_df, aes(x = V1, y = V2)) +
+      geom_point() +
+      theme(legend.position = "bottom")
+    axis2_3 <- ggplot(data = tSNE_df, aes(x = V2, y = V3)) +
+      geom_point() +
+      theme(legend.position = "bottom")
+    if (display_plot){
+      axis1_2
+      axis2_3
+    }
+    if (save_plot){
+      dir.create(here("plot"), showWarnings = FALSE)
+      ggsave(here("plot", "tSNE_axis1_axis2.png"), plot = axis1_2)
+      ggsave(here("plot", "tSNE_axis2_axis3.png"), plot = axis2_3)
     }
   }
-}
-save(cell, file = here("output","RData", "cell.RData"))
-
-# get position of each cell
-npart <- 30
-for (file in 2:npart) {
-  increment <- 1
-  theta_stars <- read_stars(here("output", "theta", paste0("KNN_theta_forest_",str_pad(file, 2, pad = "0") , ".tif")))[[1]]
-  theta_matrix_k <- matrix(0, nrow = nb_cell[1], ncol = dim(theta_stars)[3])
-  for (x in 1:dim(theta_stars)[1])
-  {
-    for (y in 1:dim(theta_stars)[2]) 
-    {
-      if ( sum(is.na(theta_stars[x,y,])) == 0)
-      {
-        theta_matrix_k[increment,] <- theta_stars[x,y,]
-        increment <- increment + 1
+  
+  if (PCA){
+    if (!is.null(var_exp_stars)){
+      if (length(var_exp_stars) != 1){
+        var_exp_stars <- merge(var_exp_stars)
       }
+      matrix_var_exp <- matrix(var_exp_stars[[1]][!is.na(var_exp_stars[[1]])], ncol = length(split(var_exp_stars)))
+    }
+    pca_with_env <- PCA(cbind(matrix_values, matrix_var_exp), graph = FALSE, ncp = 10,
+                        quanti.sup = dim(matrix_values)[2] + 1:length(split(var_exp_stars)))
+    dist_site <- dist(get_pca_ind(pca_with_env)$coord, method = "euclidian")
+    site_df <- get_pca_ind(pca_with_env)$coord[, 1: which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])]
+    exp_variances <- fviz_eig(pca_with_env)
+    PCA_1_2 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE, 
+                               col.quanti.sup = "black", invisible = "var", pointshape = 21, labelsize = 7, axes = c(1, 2),
+                               col.ind = "NA", alpha = 0.8) +
+        ggtitle("PCA on pixels with explanatories variables in sup") +
+        theme_bw() +
+        theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+    PCA_2_3 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE, 
+                               col.quanti.sup = "black", invisible = "var", pointshape = 21, labelsize = 7, axes = c(2, 3),
+                               col.ind = "NA", alpha = 0.8) +
+      ggtitle("PCA on pixels with explanatories variables in sup") +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
+    
+    if (display_plot){
+    exp_variances 
+      print(paste0("Explained variances by first ", which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1]),
+                   " axis : ", 
+                   round(sum(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])), 
+                   "%"))
+      PCA_1_2
+      PCA_2_3
+    }
+    if (save_plot){
+      png(here("plot", "PCA_explained_variances.png"))
+      exp_variances
+      dev.off()
+      ggsave(here("plot", "PCA_with_environ_sup_axis_1_2.png"), plot = PCA_1_2)
+      ggsave(here("plot", "PCA_with_environ_sup_axis_1_2.png"), plot = PCA_2_3)
     }
   }
-  theta_matrix <- cbind(theta_matrix, theta_matrix_k)
-}
-theta_df <- data.frame(theta_matrix)
-rm(theta_matrix_k)
-save(theta_df, file = here("output", "RData", "theta_df.RData"))
-
-# get environ variables for each cell 
-forest <- read_sf(here("output", "moist_forest.shp"))
-env <- st_crop(read_stars(here("output", "jSDM_data_final.tif")), forest)[[1]]
-env_cell <- matrix(0, ncol = dim(env)[3], nb_cell[1])
-increment <- 1
-for (x in 1:dim(env)[1])
-{
-  for (y in 1:dim(env)[2]) 
-  {
-    if ( sum(is.na(env[x,y,])) == 0)
-    {
-      env_cell[increment,] <- env[x,y,]
-      increment <- increment + 1
-    }
+  
+  # Plot CAH for choosen method
+  plot(hclust(dist_site), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
+  dev.off((1 - display_plot) * 2)
+  if (save_plot){
+    method = c(PCA, tSNE)
+    names(method) <- c("PCA", "tSNE")
+    png(here("plot", paste0("dendro_", names(method)[max(method)], ".png")))
+    plot(hclust(dist_tSNE), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
+    dev.off()
   }
+  return(site_df)
 }
-colnames(env_cell) <- c("ultramafic", "T_mean", "T_seas", "prec", "P_seas", "cwd", "T_mean^2", "T_seas^2", "prec^2", "P_seas^2", "cwd^2")
-env_cell <- data.frame(env_cell)
-
-##========
-## t-SNE  
-##========
-
-# t SNE 
-load(here("output", "RData", "theta_df.RData"))
-tSNE_fit <- Rtsne(scale(theta_df), dims = 3, max_iter = 5000, num_threads = 0,
-                  verbose = TRUE)
-tSNE_df <- as.data.frame(tSNE_fit$Y)
-ggplot(data = tSNE_df, aes(x = V1, y = V2)) +
-  geom_point() +
-  theme(legend.position = "bottom")
-
-# CAH with tSNE coord
-dist_tSNE <- dist(tSNE_df)
-n = nrow(theta_df) # add line where cut dendo
-nb_class <- 5
-# nb_class_2 <- 9
-MidPoint = (hclust(dist_tSNE)$height[n - nb_class] + hclust(dist_tSNE)$height[n - nb_class + 1]) / 2
-# MidPoint2 = (hclust(dist_tSNE)$height[n - nb_class_2] + hclust(dist_tSNE)$height[n - nb_class_2 + 1]) / 2
-
-png(here("output", "plot", "dendo_tSNE.png"))
-plot(hclust(dist_tSNE), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
-abline(h = MidPoint, lty = 2, col = "red")
-abline(h = MidPoint2, lty = 2, col = "red")
-dev.off()
-
-##========
-## PCA
-##========
-
-# PCA with explanatory variable in sup
-pca_with_env <- PCA(cbind(theta_df, env_cell[, 1:6]), quanti.sup = dim(theta_df)[2] + 1:6, graph = FALSE)
-save(pca_with_env, file = here("output", "RData", "pca_with_env.RData"))
-load(here("output", "RData", "pca_with_env.RData"))
-
-# keep axis while explained variance is more than 1% (7 in this case)
-png(here("output", "plot", "PCA_explained_variances.png"))
-fviz_eig(pca_with_env)
-dev.off()
-print(paste0("Explained variances by first seven axis : ", round(sum(fviz_eig(pca_with_env)$data[1:7,2])), "%"))
-
-# CAH with PCA coord
-dist_site <- dist(get_pca_ind(pca_with_env)$coord, method = "euclidian")
-png(here("output", "plot", "dendo_ACP.png"))
-plot(hclust(dist_site), labels = FALSE, main = "PCA dendrogram") 
-dev.off()
 
 ##===========
 ##
@@ -844,65 +857,62 @@ dev.off()
 ## plot KM groups on t-SNE
 ##===========
 
-KM_class <- kmeans(tSNE_df, centers = nb_class, iter.max = 20, nstart = 1000)
-tSNE_site_group <- KM_class$cluster
-table(tSNE_site_group)
+plot_HCA_EM_Kmeans <- function(method = "KM", pixel_df, nb_group, plot_3d = FALSE, display_plot_2d = TRUE, save_plot_2d = FALSE){
+  #' Display plots in 2 & 3D with number of groups set and a choosen method. Possibility to hide 2D plots and save it.
+  #'
+  #' @param method character. clustering method to chose among c("HCA", EM, "KM"). See `details` for more explications. Default is KM.
+  #' @param pixel_df dataframe. output of "dist" function in "stats" library or "PCA_or_tSNE_on_pro_pres_est" function.
+  #' @param nb_group int. number of groups for clustering.
+  #' @param plot_3d boolean. Display new window with 3d plot, default is FALSE.
+  #' @param display_plot_2d boolean. Display 2d plots, default is TRUE.
+  #' @param save_plot_2d boolean. Save in plot folder as .png file all 2d plots, default is FALSE.
+  #' @details `method` values are HCA : Hierarchical Cluster Analysis; EM : Expectation Maximisation; KM : K-means algorithm
+  
+  if (method == "KM"){
+    KM_class <- kmeans(pixel_df, centers = nb_group, iter.max = 20, nstart = 1000)
+    pixel_group <- KM_class$cluster
+  }
+  if (method == "EM"){
+    init_EM <- rand.EM(pixel_df, nclass = nb_group, min.n = 10)
+    EM_class <- assign.class(pixel_df, emcluster(pixel_df, init_EM))
+    pixel_group <- EM_class$class
+  }
+  if (method == "CAH"){
+    dist_pixel <- dist(pixel_df)
+    pixel_group <- cutree(hclust(dist_pixel), k = nb_group)
+  }
+  colnames(pixel_df) <- paste0("V", 1:dim(pixel_df)[2])
+  plot1_2 <- ggplot(data = data.frame(pixel_df, pixel_group),
+                    aes(x = V1, y = V2, color = as.factor(pixel_group))) +
+    scale_color_manual(values = viridis(nb_group)) +
+    geom_point() +
+    theme_bw() +
+    theme(legend.position = "bottom", legend.title = element_blank())
+  plot2_3 <- ggplot(data = data.frame(pixel_df, pixel_group),
+                    aes(x = V2, y = V3, color = as.factor(pixel_group))) +
+    scale_color_manual(values = viridis(nb_group)) +
+    geom_point() +
+    theme_bw() +
+    theme(legend.position = "bottom", legend.title = element_blank())
+  if (display_plot_2d){
+    plot1_2
+    plot2_3
+  }
+  if (save_plot_2d){
+    dir.create(here("plot"), showWarnings = FALSE)
+    ggsave(here("plot", paste0("axis_1_2_", method, "_groups.png")), plot = plot1_2)
+    ggsave(here("plot", paste0("axis_2_3_", method, "_groups.png")), plot = plot2_3)
+  }
+  if (plot_3d){
+    col_3d <- viridis(nb_group)[pixel_group]
+    par3d(windowRect = c(20, 30, 800, 800))
+    plot3d(pixel_df$V1, pixel_df$V2, pixel_df$V3, col = col_3d, xlab = "x", ylab = "y", zlab = "z", size = 5, pch = 16)
+    legend3d("bottomright", legend = paste0("Group_", 1:length(unique(pixel_group))), pch = 16, col = viridis(nb_group),
+             cex = 2, inset = c(0.02))
+  }
+}
 
-save(tSNE_df, tSNE_site_group, file = here("output", "RData", "tSNE.RData"))
-load(here("output", "RData", "tSNE.RData"))
 
-ggplot(data = cbind(tSNE_df, tSNE_site_group),
-       aes(x = V1, y = V2, color = as.factor(tSNE_site_group))) +
-  scale_color_manual(values = viridis(nb_class)) +
-  geom_point() +
-  theme_bw() +
-  theme(legend.position = "bottom", legend.title = element_blank())
-ggsave(here("output", "plot", "tSNE_axis_1_2_group.png"))
-
-ggplot(data = cbind(tSNE_df, tSNE_site_group),
-       aes(x = V2, y = V3, color = as.factor(tSNE_site_group))) +
-  scale_color_manual(values = viridis(nb_class)) +
-  geom_point() + 
-  theme_bw() +
-  theme(legend.position = "bottom", legend.title = element_blank()) 
-ggsave(here("output", "plot", "tSNE_axis_2_3_group.png"))
-
-##=====
-##
-## Plot PCA with KM groups from tSNE
-##
-##=====
-
-save(pca_with_env, tSNE_site_group, file = here("output", "RData", "pca_tSNE.RData"))
-load(here("output", "RData", "pca_tSNE.RData"))
-# Axis 1 & 2 no var
-fviz_pca_ind(pca_with_env, label = "none", fill = "orange", pointshape = 21, col.ind = "NA") + 
-  theme(legend.text = element_text(size = 20),
-        axis.title = element_text(size = 20),
-        title = element_text(size = 20))
-ggsave(here("output", "plot", "PCA_simple_axis_1_2.png"))
-
-# Axis 1 and 2
-fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), repel = TRUE, col.quanti.sup = "black",
-                invisible = "var", fill.ind = as.factor(tSNE_site_group), pointshape = 21, labelsize = 7, axes = c(1, 2),
-                col.ind = "NA", alpha = 0.8) +
-  ggpubr::fill_palette(viridis(nb_class)) +
-  ggtitle("PCA on species with environ variable in sup") +
-  guides(fill = guide_legend(title = "Groups by t-SNE algo")) + 
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-ggsave(here("output", "plot", "PCA_with_environ_sup_axis_1_2_tSNE.png"))
-
-# Axis 2 and 3
-fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), repel = TRUE, col.quanti.sup = "black",
-                invisible = "var", fill.ind = as.factor(tSNE_site_group), pointshape = 21, labelsize = 5, axes = c(2, 3),
-                col.ind = "NA", alpha = 0.8) +
-  ggpubr::fill_palette(viridis(nb_class)) +
-  ggtitle("PCA on species with environ variable in sup") +
-  guides(fill = guide_legend(title = "Groups by tSNE algo")) + 
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave(here("output", "plot", "PCA_with_environ_sup_axis_2_3_tSNE.png"))
 
 ##==============
 ##
@@ -930,10 +940,6 @@ ggsave(here("output", "plot", "PCA_Axis_2-3_UM_NUM.png"))
 col3d_UM <- UM
 col3d_UM[col3d_UM == 1] <- viridis(2)[1]
 col3d_UM[col3d_UM == 0] <- viridis(2)[2]
-par3d(windowRect = c(20, 30, 800, 800))
-plot3d(tSNE_df$V1, tSNE_df$V2, tSNE_df$V3, col = col3d_UM, xlab = "x", ylab = "y", zlab = "altitude")
-legend3d("bottomright", legend = c("Ultramafic", "No Ultramafic"), pch = 16, col = viridis(2),
-         cex = 2, inset = c(0.02))
 
 save(col3d_UM, tSNE_df, file = here("output", "RData", "plot3d_UM.RData"))
 ##=====
