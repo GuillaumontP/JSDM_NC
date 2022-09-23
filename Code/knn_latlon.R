@@ -11,8 +11,8 @@ EPSG <- 3163
 proj.t <- paste0("EPSG:", EPSG) 
 coord <- read.csv2(here("data_raw", "NCpippn", "coord_site.csv"), sep = ",")[, 3:4]
 data <- st_crop(read_stars(here("output", "dataNC.tif"))[,,,1], forest)
-coord_pixel_latlon <- coordinates(spTransform(as_Spatial(st_as_sf(data)), CRS("+proj=longlat +datum=WGS84")))
-coord_pixel_stars <- which(!is.na(data[[1]]), arr.ind = TRUE)[,1:2]
+coord_pixel_latlon <- coordinates(spTransform(as_Spatial(forest), CRS("+proj=longlat +datum=WGS84")))
+coord_pixel_stars <- which(!is.na(data[[1]]), arr.ind = TRUE)[, 1:2]
 distance <- split(data)
 knn <- 5
 
