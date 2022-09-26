@@ -24,6 +24,7 @@ library(EMCluster)
 library(Rtsne) # alternative to PCA
 library(rgl) # plot 3d
 library(cowplot) # multiple ggplot ie par(mfrow)
+library(tidyterra)
 
 ##================
 ##
@@ -746,7 +747,6 @@ plot_species_richness_interpolated <- function(list_theta_path, country_name = N
   return(theta_sum)
 }
 
-
 ##================
 ##
 ## Init PCA and tSNE
@@ -776,8 +776,8 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
   if (tSNE){
     tSNE_fit <- Rtsne(scale(matrix_values), dims = 3, max_iter = 5000, num_threads = 0,
                       verbose = TRUE)
-    site_df <- as.data.frame(tSNE_fit$Y)
-    dist_site <- dist(site_df)
+    pixel_df <- as.data.frame(tSNE_fit$Y)
+    dist_pixel <- dist(pixel_df)
     axis1_2 <- ggplot(data = tSNE_df, aes(x = V1, y = V2)) +
       geom_point() +
       theme(legend.position = "bottom")
@@ -804,8 +804,8 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
     }
     pca_with_env <- PCA(cbind(matrix_values, matrix_var_exp), graph = FALSE, ncp = 10,
                         quanti.sup = dim(matrix_values)[2] + 1:length(split(var_exp_stars)))
-    dist_site <- dist(get_pca_ind(pca_with_env)$coord, method = "euclidian")
-    site_df <- get_pca_ind(pca_with_env)$coord[, 1: which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])]
+    dist_pixel <- dist(get_pca_ind(pca_with_env)$coord, method = "euclidian")
+    pixel_df <- get_pca_ind(pca_with_env)$coord[, 1: which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])]
     exp_variances <- fviz_eig(pca_with_env)
     PCA_1_2 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE, 
                                col.quanti.sup = "black", invisible = "var", pointshape = 21, labelsize = 7, axes = c(1, 2),
@@ -839,7 +839,7 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
   }
   
   # Plot CAH for choosen method
-  plot(hclust(dist_site), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
+  plot(hclust(dist_pixel), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
   dev.off((1 - display_plot) * 2)
   if (save_plot){
     method = c(PCA, tSNE)
@@ -848,7 +848,7 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
     plot(hclust(dist_tSNE), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
     dev.off()
   }
-  return(site_df)
+  return(pixel_df)
 }
 
 ##===========
@@ -862,12 +862,17 @@ plot_HCA_EM_Kmeans <- function(method = "KM", pixel_df, nb_group, plot_3d = FALS
   #'
   #' @param method character. clustering method to chose among c("HCA", EM, "KM"). See `details` for more explications. Default is KM.
   #' @param pixel_df dataframe. output of "dist" function in "stats" library or "PCA_or_tSNE_on_pro_pres_est" function.
-  #' @param nb_group int. number of groups for clustering.
+  #' @param nb_group int. number of groups for clustering. Please set nb_group to high than 1.
   #' @param plot_3d boolean. Display new window with 3d plot, default is FALSE.
   #' @param display_plot_2d boolean. Display 2d plots, default is TRUE.
   #' @param save_plot_2d boolean. Save in plot folder as .png file all 2d plots, default is FALSE.
+  #' @return int vector. Group number for each pixel.  
   #' @details `method` values are HCA : Hierarchical Cluster Analysis; EM : Expectation Maximisation; KM : K-means algorithm
   
+  if (nb_group == 1){
+    print("Please select more than 1 group")
+    break
+  }
   if (method == "KM"){
     KM_class <- kmeans(pixel_df, centers = nb_group, iter.max = 20, nstart = 1000)
     pixel_group <- KM_class$cluster
@@ -910,234 +915,160 @@ plot_HCA_EM_Kmeans <- function(method = "KM", pixel_df, nb_group, plot_3d = FALS
     legend3d("bottomright", legend = paste0("Group_", 1:length(unique(pixel_group))), pch = 16, col = viridis(nb_group),
              cex = 2, inset = c(0.02))
   }
+  return(pixel_group)
 }
 
-
-
-##==============
-##
-## Plot PCA 2 & 3 with ultramafics soil
-## Plot t-SNE with ultramafics soil
-##===============
-
-col <- UM
-col[col == 1] <- "Ultramafic"
-col[col == 0] <- "No Ultramafic"
-save(col, file = here("output", "RData", "UM_col.RData"))
-load(here("output", "RData", "UM_col.RData"))
-
-# PCA & t-SNE Ultramafic distinction
-load(here("output", "RData", "pca_with_env.RData"))
-fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), repel = TRUE, col.quanti.sup = "black",
-                invisible = "var", fill.ind = col, pointshape = 21, labelsize = 7, axes = c(2, 3), 
-                col.ind = "NA", alpha = 0.6, 
-                legend.title = "Type of soil", title = "PCA : soil area") +
-  ggpubr::fill_palette(viridis(2)) +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave(here("output", "plot", "PCA_Axis_2-3_UM_NUM.png"))
-
-col3d_UM <- UM
-col3d_UM[col3d_UM == 1] <- viridis(2)[1]
-col3d_UM[col3d_UM == 0] <- viridis(2)[2]
-
-save(col3d_UM, tSNE_df, file = here("output", "RData", "plot3d_UM.RData"))
 ##=====
 ## Change the coordinate scale for [10.255].
 ## for plot color for each pixel
 ##=====
-save(pca_with_env, theta_df, tSNE_df, file = here("output", "RData", "RGB.RData"))
-load(here("output", "RData", "RGB.RData"))
-load(here("output", "RData", "cell.RData"))
-
-# init stars object with CRS, extent, NA,...
-rastRGB <- read_stars(here("output", "theta", "KNN_theta_forest_01.tif"))[,,,1:3]
-# PCA_site_coord <- get_pca_ind(pca_with_env)$coord[,1:3]
-tSNE_site_coord <- theta_df
-# RGB_value_PCA <- PCA_site_coord
-RGB_value_tSNE <- tSNE_df
-
-for (l in 1:3) { # set to [0,255]
-  # RGB_value_PCA[, l] <- PCA_site_coord[, l] - min(PCA_site_coord[, l])
-  # RGB_value_PCA[, l] <- RGB_value_PCA[, l] / max(RGB_value_PCA[, l]) * 255
-  RGB_value_tSNE[, l] <- tSNE_site_coord[, l] - min(tSNE_site_coord[, l])
-  RGB_value_tSNE[, l] <- RGB_value_tSNE[, l] / max(RGB_value_tSNE[, l]) * 255
-}
-
-# put RGB color in raster and one col by group 
-# rastRGB_PCA <- rastRGB
-rastRGB_tSNE <- rastRGB
-for (i in 1:dim(get_pca_ind(pca_with_env)$coord[,1:3])[1]){
-  # rastRGB_PCA[[1]][cell[i, 1], cell[i, 2],] <- unlist(RGB_value_PCA[i,])
-  rastRGB_tSNE[[1]][cell[i, 1], cell[i, 2],] <- unlist(RGB_value_tSNE[i,])
-}
-
-# Coloration RGB
-# write_stars(rastRGB_PCA, dsn = here("output", "RGB_forest_PCA.tif"), 
-#             options = c("COMPRESS=LZW", "PREDICTOR=2"))
-write_stars(rastRGB_tSNE, dsn = here("output", "RGB_forest_tSNE.tif"), 
-            options = c("COMPRESS=LZW", "PREDICTOR=2"))
-
-##================
-##
-## Plot R_G_B and RGB with PCA coord & t-SNE coord
-## Plot KM groups with t-SNE coord
-##================
-
-# prediction on forest area
-
-# RGB_forest_PCA <- terra::rast(here("output", "RGB_forest_PCA.tif"))
-RGB_forest_tSNE <- terra::rast(here("output", "RGB_forest_tSNE.tif"))
-colorize(RGB_forest_tSNE, value = 1:3, to = "col", stretch = "hist", filename = here("output", "RGB_forest_tSNE_one.tif"), overwrite = TRUE)
-# RGB_forest_PCA <- read_stars(here("output", "RGB_forest_PCA.tif"))
-RGB_forest_tSNE <- read_stars(here("output", "RGB_forest_tSNE.tif"))
-R_tSNE <- split(RGB_forest_tSNE)[1,,]
-names(R_tSNE) <- "Axis 1 tSNE"
-G_tSNE <- split(RGB_forest_tSNE)[2,,]
-names(G_tSNE) <- "Axis 2 tSNE"
-B_tSNE <- split(RGB_forest_tSNE)[3,,]
-names(B_tSNE) <- "Axis 3 tSNE"
-GT <- readOGR(here("data_raw", "Grande_Terre", "Grande_Terre.shp"))
-
-R_tSNE_plot <- ggplot() + 
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "grey") +
-  geom_stars(data = R_tSNE) +
-  scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Reds"), na.value = "transparent") +
-  coord_fixed() +
-  theme_bw()
-G_tSNE_plot <- ggplot() + 
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "grey") +
-  geom_stars(data = G_tSNE) +
-  scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Greens"), na.value = "transparent") +
-  coord_fixed() +
-  theme_bw()
-B_tSNE_plot <- ggplot() + 
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "grey") +
-  geom_stars(data = B_tSNE) +
-  scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Blues"), na.value = "transparent") +
-  coord_fixed() +
-  theme_bw()
-R_G_B_plot <- plot_grid(R_tSNE_plot, G_tSNE_plot, B_tSNE_plot, ncol = 1, nrow = 3)
-R_G_B_plot
-save_plot(filename = here("output", "plot", "R_G_B_forest_tSNE.png"), plot = R_G_B_plot, nrow = 3)
-
-# get mean color of pixels for each group
-load(here("output","RData", "cell.RData"))
-load(here("output", "RData", "pca_tSNE.RData"))
-RGB_forest_tSNE <- read_stars(here("output", "RGB_forest_tSNE_one.tif"))
-col_palette <- attr(RGB_forest_tSNE$RGB_forest_tSNE_one.tif, "color")
-pixel_col_hist <- matrix(0, ncol = 4, nrow = dim(cell)[1])
-for (n in 1:dim(cell)[1]) {
-  pixel_col_hist[n, 1:3] <- t(col2rgb(col_palette[RGB_forest_tSNE[[1]][cell[n, 1], cell[n, 2]]]))
-}
-pixel_col_hist[,4] <- tSNE_site_group
-col_mean_group <- matrix(0, ncol = 3, nrow = nb_class) 
-for (group in 1:nb_class) {
-  col_mean_group[group, ] <- colMeans(pixel_col_hist[pixel_col_hist[, 4] == group, 1:3]) # mean col for each group
-}
-RGB_forest_group <- read_stars(here("output", "RGB_forest_tSNE.tif"))
-for (i in 1:dim(cell)[1]) {
-  RGB_forest_group[[1]][cell[i,1], cell[i,2],] <- col_mean_group[pixel_col_hist[i, 4], ]
-}
-write_stars(RGB_forest_group, here("output", "RGB_forest_group.tif"))
-# plotRGB(terra::rast(here("output", "RGB_forest_group.tif")))
-
-RGB_forest_tSNE <- terra::rast(here("output", "RGB_forest_tSNE.tif"))
-png(here("output", "plot", "RGB_forest_tSNE.png"))
-par(mfrow = c(1, 1))
-plotRGB(RGB_forest_tSNE, stretch = "hist")
-title(main = "Predictives species community \n on forest area with tSNE",
-      cex.main = 1.5, line = -3)
-dev.off()
-
-RGB_forest_group <- terra::rast(here("output", "RGB_forest_group.tif"))
-color_group_hex <- rep(0, nb_class)
-for (col  in 1:nb_class) {
-  color_group_hex[col] <- rgb2hex(r = round(col_mean_group[col, 1]), g = round(col_mean_group[col, 2]), b = round(col_mean_group[col, 3]))
-} 
-ggplot() +
-  geom_polygon(data = GT, aes(x = long, y = lat), colour = "black", fill = "white") +
-  geom_tile() +
-  geom_spatial_rgb(data = RGB_forest_group, 
-                   aes(x = x, y = y, r = red, g = green, b = blue, asp = 1)) +
-  coord_fixed() +
-  geom_label(aes(x = 280000, y = 200000, label = "Group 1", size = 5), fill = color_group_hex[1]) + # 
-  geom_label(aes(x = 280000, y = 215000, label = "Group 2", size = 5), fill = color_group_hex[2]) +
-  geom_label(aes(x = 280000, y = 230000, label = "Group 3", size = 5), fill = color_group_hex[3]) +
-  geom_label(aes(x = 280000, y = 245000, label = "Group 4", size = 5), fill = color_group_hex[4]) +
-  geom_label(aes(x = 280000, y = 260000, label = "Group 5", size = 5), fill = color_group_hex[5]) +
-  # geom_label(aes(x = 280000, y = 275000, label = "Group 6", size = 5), fill = color_group_hex[6]) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  labs(x = "longitude", y = "latitude")
-ggsave(here("output", "plot", "RGB_forest_group_tSNE.png"))
-
-# 20 species more likely on site of each group
-load(here("output", "RData", "RGB.RData"))
-max_species_group <- matrix(0, ncol = nb_class * 3, nrow = 20) 
-min_species_group <- matrix(0, ncol = nb_class * 3, nrow = 20) 
-data_clear <- read.csv2(here("data_raw", "NCpippn", "data_clear.csv"), sep =",")
-params_species <- read.csv2(here("output", "params_species.csv"), sep = ",", dec = ".")
-names(theta_df) <- params_species$species
-colmax <- rep(0, 20)
-colmin <- rep(0, 20)
-for (h in 1:nb_class)
-{
-  max_species_group[,3 * h - 2] <- names(sort(colMeans(theta_df[tSNE_site_group == h,]), decreasing = TRUE)[1:20])
-  min_species_group[,3 * h - 2] <- names(sort(colMeans(theta_df[tSNE_site_group == h,]), decreasing = FALSE)[1:20])
-  for (hh in 1:dim(max_species_group)[1]) 
-  {
-    colmax[hh] <- which(names(theta_df) == max_species_group[hh, 3 * h - 2])
-    colmin[hh] <- which(names(theta_df) == min_species_group[hh, 3 * h - 2])
-    max_species_group[hh, 3 * h - 2] <- gsub("\ \ ", "\\.\ ", gsub("\\.", "\ ", max_species_group[hh, 3 * h - 2]))
-    min_species_group[hh, 3 * h - 2] <- gsub("\ \ ", "\\.\ ", gsub("\\.", "\ ", min_species_group[hh, 3 * h - 2]))
+plot_RGB_group_by_color <- function(stars_pixels_group, coord_pixel, country_name = NULL, 
+                                    country_sf = NULL, display_plot = TRUE, save_plot = FALSE){
+  #' Create plots with coordinates from dimensional reduction algorithm and plot pixel group with multiple colors. Plot can be hide and/or save.
+  #'
+  #' @param stars_pixel_group stars object. with group number in each pixel usefull, NA in others pixels.
+  #' @param coord_pixel flot matrix. coordinates of each pixel, obtained with `PCA_or_tSNE_on_pro_pres_est` function.
+  #' @param country_name character. optional, add country's border to plots , default is NULL.
+  #' @param country_sf sf object. optional, add border to plots, default is NULL.
+  #' @param display_plot boolean. Show plots, default is TRUE.
+  #' @param save_plot boolean. Save plots in plot folder as .png file, default is FALSE.
+  
+  nb_group <- length(unique(c(stars_pixels_group[[1]])))
+  coord_pixel <- coord_pixel[, 1:3]
+  cells_pixel <- which( !is.na(stars_pixels_group), arr.ind = TRUE)[, 1:2]
+  R_stars <- G_stars <- B_stars <- stars_pixels_group
+  for (l in 1:3) { 
+    # set to [0,255]
+    coord_pixel[, l] <- coord_pixel[, l] - min(coord_pixel[, l])
+    coord_pixel[, l] <- coord_pixel[, l] / max(coord_pixel[, l]) * 255
   }
-  max_species_group[, 3 * h - 1] <- colSds(data.matrix(theta_df)[tSNE_site_group == h,], cols = colmax)
-  min_species_group[, 3 * h - 1] <- colSds(data.matrix(theta_df)[tSNE_site_group == h,], cols = colmin)
-  max_species_group[, 3 * h] <- colMeans(data.matrix(theta_df)[tSNE_site_group == h,])[colmax]
-  min_species_group[, 3 * h] <- colMeans(data.matrix(theta_df)[tSNE_site_group == h,])[colmin]
-  writeLines(max_species_group[, 3 * h - 2], here("output", "classification", paste0("Group_", h, "_species_max.txt")))
-  writeLines(min_species_group[, 3 * h - 2], here("output", "classification", paste0("Group_", h, "_species_min.txt")))
+  for (cell in 1:dim(cells_pixel)[1]) { 
+    # affect values in [0, 255] to each pixel in stars object 
+    R_stars[[1]][cells_pixel[cell, 1], cells_pixel[cell, 2]] <- coord_pixel[cell, 1]
+    G_stars[[1]][cells_pixel[cell, 1], cells_pixel[cell, 2]] <- coord_pixel[cell, 2]
+    B_stars[[1]][cells_pixel[cell, 1], cells_pixel[cell, 2]] <- coord_pixel[cell, 3]
+  }
+  # RGB plot 
+  RGB_terra <- terra::rast(c(R_stars, G_stars, B_stars))
+  RGB_terra <- colorize(RGB_terra, value = 1:3, to = "col", stretch = "hist")
+  col_palette <- coltab(RGB_terra)[[1]][, 1:4]
+  col_hex <- rep(0, dim(col_palette)[1])
+  for (i in 1:dim(col_palette)[1]) {
+    col_hex[i] <- rgb2hex(r = col_palette[i, 2], g = col_palette[i, 3], b = col_palette[i, 4])
+  }
+  RGB_stars <- st_as_stars(RGB_terra)
+  # plot groups with mean color of each group
+  col_mean_group <- rep(0, nb_group)
+  for (group in 1:nb_group){
+    col_mean_group[group] <- rbg2hex(r = mean(R_stars[[1]][which(stars_pixels_group[[1]] == group, arr.ind = TRUE)]),
+                                     g = mean(G_stars[[1]][which(stars_pixels_group[[1]] == group, arr.ind = TRUE)]),
+                                     b = mean(B_stars[[1]][which(stars_pixels_group[[1]] == group, arr.ind = TRUE)]))
+  }
+  names(col_mean_group) <- 1:length(col_mean_group) 
+  # init ggplot
+  R_plot <- ggplot()
+  G_plot <- ggplot()
+  B_plot <- ggplot()
+  RGB_plot <- ggplot()
+  group_plot <- ggplot()
+  if(!is.null(country_name)){
+    R_plot <- R_plot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                               colour = "black", fill = "grey") 
+    G_plot <- G_plot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                               colour = "black", fill = "grey") 
+    B_plot <- B_plot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                               colour = "black", fill = "grey") 
+    RGB_plot <- RGB_plot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                                   colour = "black", fill = "grey") 
+    group_plot <- group_plot + geom_sf(data =  ne_countries(scale = 10, returnclass = "sf", country = country_name), 
+                                       colour = "black", fill = "grey") 
+  }
+  if(!is.null(country_sf)){
+    R_plot <- R_plot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+    G_plot <- G_plot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+    B_plot <- B_plot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+    RGB_plot <- RGB_plot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+    group_plot <- group_plot + geom_sf(data = country_sf, colour = "black", fill = "grey") 
+  }
+  R_plot <- R_plot + geom_stars(data = R_stars) +
+    scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Reds"), na.value = "transparent") +
+    coord_fixed() +
+    theme_bw()
+  G_plot <- G_plot +geom_stars(data = G_stars) +
+    scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Greens"), na.value = "transparent") +
+    coord_fixed() +
+    theme_bw()
+  B_plot <- B_plot +geom_stars(data = B_stars) +
+    scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Blues"), na.value = "transparent") +
+    coord_fixed() +
+    theme_bw()
+  title <- ggdraw() + 
+    draw_label("Pixel coordinates of the first 3 axis \n with color variations")
+  R_G_B_plot <- plot_grid(title, R_plot, G_plot, B_plot, ncol = 1, nrow = 3)
+  RGB_plot <- RGB_plot + geom_stars(data = RGB_stars) +
+    scale_fill_gradientn(colors = col_hex, na.value = "transparent") +
+    coord_fixed() +
+    theme_bw() +
+    theme(legend.position = "none",
+          title = element_text("Pixel coordinates in the first 3 axis \n with RGB color variations"))
+  group_plot <- group_plot + geom_stars(data = stars_pixels_group) + 
+    scale_fill_gradientn(colors = col_mean_group, na.value = "transparent") +
+    coord_fixed() + 
+    theme_bw() +
+    theme(title = element_text("Group of pixels \n filled by mean color of each group"))
+  if (display_plot){
+    R_G_B_plot
+    RGB_plot
+    group_plot
+  }
+  if (save_plot){
+    dir.create(here("plot"), showWarnings = FALSE)
+    save_plot(filename = here("plot", "R_G_B.png"), plot = R_G_B_plot, nrow = 3)
+    ggsave(filename = here("plot", "RGB.png"), plot = RGB_plot)
+    ggsave(here("plot", "color_group.png"), plot = group_plot)
+  }
 }
-colnames(max_species_group) <- c(matrix(c(paste("Group", 1:nb_class), paste("Sd", 1:nb_class),
-                                          paste("Mean", 1:nb_class)), ncol = nb_class, byrow = TRUE))
-colnames(min_species_group) <- c(matrix(c(paste("Group", 1:nb_class), paste("Sd", 1:nb_class), 
-                                          paste("Mean", 1:nb_class)), ncol = nb_class, byrow = TRUE))
-write_csv2(data.frame(max_species_group), file = here("output", "classification", "max_species_group.csv"))
-write_csv2(data.frame(min_species_group), file = here("output", "classification", "min_species_group.csv"))
 
-##================
-##
-## Plot random effect alpha with
-## size of the place
-##================
-
-alpha <- read_stars(here("output", "alphas.tif"))
-latlong <- read.csv2(here("data_raw", "NCpippn", "coord_site.csv"), sep = ",")
-latlong$X <- NULL
-coord <- matrix(as.numeric(unlist(latlong)), nrow = nrow(latlong))[,2:3]
-alpha_site <- rep(0, nrow = dim(coord)[1])
-for (i in 1:dim(coord)[1]){
-  alpha_site[i] <- as.numeric(system(glue('gdallocationinfo -l_srs {proj.t} -valonly {here("output", "alphas.tif")} \\
-                                             -wgs84 {coord[i,1]} {coord[i,2]}'), intern = TRUE))
+max_min_species_group <- function(list_theta_path, stars_pixels_group, nb_top_species = 20, save_csv = TRUE){
+  #' Get species with estimated probabilities of presence highest for each group. Same thing with lowest probabilities.
+  #' 
+  #' @param list_theta_path character vector. full path to Tiff files containing species probabilities of presence to considers.
+  #' @param stars_pixel_group stars object. each pixel contains values of its group number.
+  #' @param nb_top_species int. Number of species to display for each group, for lists of lowest and highest probabilities, default is 20.
+  #' @param save_csv boolean. Allows to save return in output folder in .csv file, default is TRUE.
+  #' @return dataframe. For each group, species name with highest probabilities of presence, mean probabilities, sd probabilities. Same for species with lowest probabilities of presence.
+  
+  stars_pixels_group <- rast(stars_pixels_group)
+  matrix_values <- values(stars_pixels_group)
+  names(matrix_values) <- "group"
+  for (i in list_theta_path) { 
+    # create matrix with probabilities for all species on each pixels
+    theta_terra <- rast(i)
+    matrix_values <- cbind(matrix_values, values(theta_terra))
+    names(matrix_values) <- c(names(matrix_values), names(theta_terra))
+  }
+  nb_group <- length(unique(matrix_values[, 1]))
+  max_species_group <- matrix(0, ncol = nb_group * 3, nrow = nb_top_species) 
+  min_species_group <- matrix(0, ncol = nb_group * 3, nrow = nb_top_species) 
+  name_min_max <- NULL
+  for (group in 1:nb_group) {
+    max_species_group[, 3 * group - 2] <- names(sort(colMeans(matrix_values[matrix_values[, 1] == group, ]), decreasing = TRUE))[1:nb_top_species]
+    min_species_group[, 3 * group - 2] <- names(sort(colMeans(matrix_values[matrix_values[, 1] == group, ]), decreasing = FALSE))[1:nb_top_species]
+    max_species_group[, 3 * group - 1] <- colMeans(matrix_values[matrix_values[, 1] == group, max_species_group[, 3 * group - 2]])
+    min_species_group[, 3 * group - 1] <- colMeans(matrix_values[matrix_values[, 1] == group, min_species_group[, 3 * group - 2]])
+    max_species_group[, 3 * group] <- colSds(matrix_values[matrix_values[, 1] == group, max_species_group[, 3 * group - 2]])
+    min_species_group[, 3 * group] <- colSds(matrix_values[matrix_values[, 1] == group, min_species_group[, 3 * group - 2]])
+    name_min_max <- c(name_min_max, paste0(c("Group_", "Mean_", "Sd_"), group))
+  }
+  colnames(max_species_group) <- paste("Max_", name_min_max)
+  colnames(min_species_group) <- paste("Min_", name_min_max)
+  min_max_species_group <- data.frame(max_species_group, min_species_group)
+  if (save_csv){
+    dir.create(here("output"), showWarnings = FALSE)
+    write_csv(min_max_species_group, col_names = TRUE, file = here("output", "min_max_species_group.csv"))
+  }
+  return(min_max_species_group)
 }
-data <- read.csv2(here("data_raw", "NCpippn", "data_clear.csv"), sep = ",")
-aire_site <- rep(0, dim(coord)[1])
-k <- 1
-for (i in unique(data$plot_name)){
-  tempo <- data$AREA[data$plot_name == i][1]
-  if (length(tempo) > 1){print(i)}
-  aire_site[k] <- tempo[1]
-  k <- k +1
-}
-save(aire_site, alpha_site, file = here("output", "RData", "alpha_vs_area.RData"))
-load(here("output", "RData", "alpha_vs_area.RData"))
-
-png(here("output", "plot", "alpha_vs_area.png"))
-par(mfrow = c(1, 1), mgp = c(2.5, 1, 0))
-plot(aire_site, alpha_site, main = "Site random effect \n as a function of site's area")
-dev.off()
-
 ##================
 ##
 ## Specificity ~0.989
@@ -1155,6 +1086,13 @@ theta <- jSDM_binom_pro$theta_latent
 # Compute the proportion of species predicted as present 
 # among the species  observed at each site for the different data-sets.
 Sensitivity <- function(PA, theta){
+  #' Process Sensitivity (species rightly predicted as present) on inventory sites.
+  #'
+  #' @param PA dataframe. containing only 0 and 1 with colnames with species names.
+  #' @param jSDM_bino_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library
+  #' @return float vector. percentage of species rightly predicted as present on each inventory site.
+  
+  theta <- JSDM_bino_pro$theta_latent
   n_sites <- nrow(PA)
   score <- rep(0, n_sites)
   for(i in 1:n_sites){
@@ -1168,6 +1106,13 @@ Sensitivity <- function(PA, theta){
   return(score)
 }
 Specificity  <- function(PA, theta){
+  #' Process Specificity (species rightly predicted as absent) on inventory sites.
+  #'
+  #' @param PA dataframe. containing only 0 and 1 with colnames with species names.
+  #' @param jSDM_bino_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library
+  #' @return float vector. percentage of species rightly predicted as absent on each inventory site.
+  
+  theta <- JSDM_bino_pro$theta_latent 
   n_sites <- nrow(PA)
   score <- rep(0, n_sites)
   for(i in 1:n_sites){
