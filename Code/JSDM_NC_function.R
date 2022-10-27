@@ -10,7 +10,7 @@ library("rnaturalearthdata")
 library("rnaturalearthhires")
 library(ggplot2)
 library(viridis)
-library(rgrass7)
+library(rgrass)
 library(terra)
 library(stringr)
 library(ade4)
@@ -434,7 +434,7 @@ plot_species_richness <- function(jSDM_binom_pro, coord_site, country_name = NUL
     geom_point(data = species_richness, 
                aes(x = as.numeric(longitude), y = as.numeric(latitude), colour = richness), size = 1) +
     ggtitle("Observed species richness") +
-    scale_colour_gradientn(colours = rev(rocket(10)), name = "Number of species", 
+    scale_colour_gradientn(colours = rev(rocket(10)), name = "Number \n of species", 
                            limits = c(floor(min(species_richness[, c(1,4)])), ceiling(max(species_richness[, c(1,4)])))) +
     coord_sf(xlim = c(latlon_output[1], latlon_output[3]), ylim = c(latlon_output[2], latlon_output[4]), expand = FALSE) +
     theme_bw() +
@@ -454,7 +454,7 @@ plot_species_richness <- function(jSDM_binom_pro, coord_site, country_name = NUL
     geom_point(data = species_richness, 
                aes(x = as.numeric(longitude), y = as.numeric(latitude), colour = estimate), size = 1) +
     ggtitle("Estimated species richness") +
-    scale_colour_gradientn(colours = rev(rocket(10)), name = "Number of species", 
+    scale_colour_gradientn(colours = rev(rocket(10)), name = "Number \n of species", 
                            limits = c(floor(min(species_richness[, c(1,4)])), ceiling(max(species_richness[, c(1,4)])))) +
     coord_sf(xlim = c(latlon_output[1], latlon_output[3]), ylim = c(latlon_output[2], latlon_output[4]), expand = FALSE) +
     theme_bw() +
@@ -558,14 +558,13 @@ knn_interpolation_jSDM <- function(jSDM_binom_pro, k = 5, coord_site, sf_forest)
 ##
 ##================
 
-prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pro, data_stars, area_stars = NULL){
+prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pro, data_stars){
   #' Create tif files with probabilities of presences for each species on a given area. Results are save in output/theta
   #'
   #' @param alpha_stars stars object. with centered values in 0.
   #' @param latent_var_stars multilayer stars object. with as layer as latent variables. Make sure each latent variable is scale.
   #' @param jSDM_binom_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library.
   #' @param data_stars multilayer stars object. with same explanatories variables whom in `jSDM_binom_pro`. Make sure your explanatories variable are scale.
-  #' @param area_stars stars object. with values of pixel size with same scale parameters used in `jSDM_binom_pro`.
   
   dir.create(here("output"), showWarnings = FALSE)
   dir.create(here("output", "theta"), showWarnings = FALSE)
@@ -575,7 +574,6 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
   if ( length(latent_var_stars) == 1){
     latent_var_stars <- split(latent_var_stars)
   }
-  data_stars <- c(data_stars, area_stars)
   n_var <- length(data_stars)
   n_species <- length(colnames(jSDM_binom_pro$theta_latent))
   npart <- ceiling(n_species / 30) # number of species in each file set to 30
@@ -615,7 +613,7 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
     }
     
     # probit_theta_1
-    probit_theta_1 <- Xbeta1 + Wlambda_1 + alpha_stars + area_stars
+    probit_theta_1 <- Xbeta1 + Wlambda_1 + alpha_stars
     probit_theta <- probit_theta_1
     
     ## Other species
@@ -636,7 +634,7 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
       }
       
       ## probit_theta_j
-      probit_theta_j <- Xbeta_j + Wlambda_j + alpha_stars + area_stars
+      probit_theta_j <- Xbeta_j + Wlambda_j + alpha_stars
       probit_theta <- c(probit_theta, probit_theta_j)
     }
     names(probit_theta) <- rownames(params_species)[species.range[1]:species.range[2]]
@@ -751,14 +749,16 @@ plot_species_richness_interpolated <- function(list_theta_path, country_name = N
     latlon_output <- st_bbox(country_sf)
     map <- country_sf
   }
+  theta_sum <- st_as_stars(theta_sum)
+  theta_sum[[1]] <- pmin(theta_sum[[1]], 400) ########################################"
   gplot <- ggplot() + 
     geom_sf(data = map, colour = "black", fill = "grey") +
-    geom_stars(data = st_as_stars(theta_sum)) +
+    geom_stars(data = theta_sum) +
     ggtitle("Estimated current species richness") +
     scale_fill_gradientn(colours = rev(rocket(5)), na.value = "transparent") +
     coord_sf(xlim = c(latlon_output[1], latlon_output[3]), ylim = c(latlon_output[2], latlon_output[4]), expand = TRUE) +
     theme_bw() +
-    labs(fill = "Number of species") + 
+    labs(fill = "Number \n of species") + 
     theme(plot.title = element_text(hjust = 0.5))
   if (save_plot){
     dir.create(here("plot"), showWarnings = FALSE)
@@ -944,6 +944,7 @@ plot_HCA_EM_Kmeans <- function(method = "KM", pixel_df, nb_group, display_plot_3
 ## Change the coordinate scale for [10.255].
 ## for plot color for each pixel
 ##=====
+
 plot_RGB_group_by_color <- function(stars_pixels_group, coord_pixel, country_name = NULL, 
                                     country_sf = NULL, display_plot = TRUE, save_plot = FALSE){
   #' Create plots with coordinates from dimensional reduction algorithm and plot pixel group with multiple colors. Plot can be hide and/or save.
@@ -1042,7 +1043,7 @@ plot_RGB_group_by_color <- function(stars_pixels_group, coord_pixel, country_nam
     scale_fill_gradientn(colours = brewer.pal(n = 9, name = "Blues"), na.value = "transparent") +
     theme_bw()
   title <- textGrob("Pixel coordinates of the first 3 axis \n with color variations", gp = gpar(fontsize = 20, font = 3))
-  R_G_B_plot <- arrangeGrob(R_plot, G_plot, B_plot, ncol = 3, nrow = 1, top = title)
+  R_G_B_plot <- arrangeGrob(R_plot, G_plot, B_plot, ncol = 2, nrow = 2, top = title)
   RGB_plot <- RGB_plot + geom_stars(data = RGB_stars) +
     scale_fill_gradientn(colors = col_hex, na.value = "transparent") +
     theme_bw() +
@@ -1117,14 +1118,14 @@ max_min_species_group <- function(list_theta_path, stars_pixels_group, nb_top_sp
 # Accuracy 
 # Compute the proportion of species predicted as present 
 # among the species  observed at each site for the different data-sets.
-Sensitivity <- function(PA, JSDM_binom_pro){
+Sensitivity <- function(PA, jSDM_binom_pro){
   #' Process Sensitivity (species rightly predicted as present) on inventory sites.
   #'
   #' @param PA dataframe. containing only 0 and 1 with colnames with species names.
   #' @param jSDM_bino_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library
   #' @return float vector. percentage of species rightly predicted as present on each inventory site.
   
-  theta <- JSDM_bino_pro$theta_latent
+  theta <- jSDM_bino_pro$theta_latent
   n_sites <- nrow(PA)
   score <- rep(0, n_sites)
   for(i in 1:n_sites){
@@ -1137,14 +1138,14 @@ Sensitivity <- function(PA, JSDM_binom_pro){
   }
   return(score)
 }
-Specificity  <- function(PA, JSDM_binom_pro){
+Specificity  <- function(PA, jSDM_binom_pro){
   #' Process Specificity (species rightly predicted as absent) on inventory sites.
   #'
   #' @param PA dataframe. containing only 0 and 1 with colnames with species names.
   #' @param jSDM_bino_pro object of class jSDM. output of "jSDM_binomial_probit" of "jSDM" library
   #' @return float vector. percentage of species rightly predicted as absent on each inventory site.
   
-  theta <- JSDM_bino_pro$theta_latent 
+  theta <- jSDM_bino_pro$theta_latent 
   n_sites <- nrow(PA)
   score <- rep(0, n_sites)
   for(i in 1:n_sites){

@@ -14,7 +14,7 @@ library(RColorBrewer)
 library(readr)
 library(rgdal)
 library(rgl) # plot 3d
-library(rgrass7)
+library(rgrass)
 library(rnaturalearth) # plotting maps
 library(rnaturalearthdata)
 library(rnaturalearthhires)
@@ -49,14 +49,14 @@ write_stars(c(st_normalize(st_crop(read_stars(here("output", "environ_allNC.tif"
             here("output", "dataNC.tif"),
             options = c("COMPRESS=LZW","PREDICTOR=2"))
 
-elevation <- split(read_stars(here("output", "dataNC.tif")))["elevation"]
-forest_per <- split(read_stars(here("output", "dataNC.tif")))["forest"]
-
 ##=================
 ##
 ## Create moist forest mask
 ##
 ##=================
+
+elevation <- split(read_stars(here("output", "dataNC.tif")))["elevation"]
+forest_per <- split(read_stars(here("output", "dataNC.tif")))["forest"]
 
 forest <- create_sf_forest(EPSG = EPSG, altitude_min = 10, percentage_min = 50, elevation = elevation, forest = forest_per)
 monthly_precipitation <- split(read_stars(here("output", "current_chelsaNC.tif")))[paste0("pr", 1:12)]
@@ -97,7 +97,7 @@ PA$X <- NULL
 jSDM_bin_pro <- JSDM_bino_pro(presence_data = PA, site_data = var_site, n_latent = 2, V_beta = c(rep(1, 12), 0.001),
               mu_beta = c(rep(0, 12), 0.25), nb_species_plot = 2, display = TRUE, save_plot = TRUE)
 
-save(jSDM_bin_pro, here("jSDM_bin_pro.RData"))
+save(jSDM_bin_pro, file = here("jSDM_bin_pro.RData"))
 
 plot_pres_est_one_species(jSDM_binom_pro = jSDM_bin_pro, coord_site = coord_site, country_name = "New Caledonia",
                           display_plot = TRUE, save_plot = TRUE)
@@ -123,14 +123,9 @@ alpha <- read_stars(here("output", "alpha_knn.tif"))
 W1 <- read_stars(here("output", "lv_1_knn.tif"))
 W2 <- read_stars(here("output", "lv_2_knn.tif"))
 W <- c(W1, W2, along = "band")
-sc <- scale(log(coord_site$AREA))
-log_area_scale <- (log(1000 * 1000) - attr(sc, "scaled:center")) / attr(sc, "scaled:scale")
-area_stars <- alpha
-area_stars[[1]][which(!is.na(area_stars[[1]]), arr.ind = TRUE)] <- log_area_scale / 2 ###############
-names(area_stars) <- "log_area"
 
 prob_est_species_forest(alpha_stars = alpha, latent_var_stars = W, jSDM_binom_pro = jSDM_bin_pro,
-                        data_stars = var_jSDM, area_stars = area_stars)
+                        data_stars = var_jSDM)
 
 plot_prob_pres_interp(theta_stars = read_stars(here("output", "theta", "KNN_theta_01.tif")), country_sf = GT, 
                       display_plot = TRUE, save_plot = TRUE)
@@ -148,7 +143,7 @@ coord_PCA_or_tSNE <- PCA_or_tSNE_on_pro_pres_est(tSNE = TRUE, PCA = FALSE, list_
                                           display_plot = TRUE, save_plot = TRUE)
 Sys.time()
 
-KM_groups <- plot_HCA_EM_Kmeans(method = "KM", pixel_df = coord_PCA_or_tSNE, nb_group = 5, display_plot_3d = TRUE,
+KM_groups <- plot_HCA_EM_Kmeans(method = "KM", pixel_df = coord_PCA_or_tSNE, nb_group = 7, display_plot_3d = TRUE,
                    display_plot_2d = TRUE, save_plot_2d = TRUE)
 
 ##=================
