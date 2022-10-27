@@ -1,2 +1,0 @@
-Extent of NCL in EPSG:3163
-xmin: -684000, ymin: 112000, xmax: 1054000, ymax: 747000
