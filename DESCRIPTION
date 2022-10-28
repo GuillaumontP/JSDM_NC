@@ -1,0 +1,52 @@
+Package: jsdmnc
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: person("Pierre", "Guillaumont", role=c("aut", "cre"),
+         email="pierre.guillaumont@gmail.com")
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    ade4,
+    coda,
+    cowplot,
+    EMCluster,
+    factoextra,
+    FactoMineR,
+    ggplot2,
+    ggtern,
+    glue,
+    graphics,
+    grDevices,
+    grid,
+    gridExtra,
+    here,
+    jSDM,
+    matrixStats,
+    RColorBrewer,
+    readr,
+    rgdal,
+    rgl,
+    rgrass,
+    rnaturalearth,
+    rnaturalearthdata,
+    rnaturalearthhires,
+    Rtsne,
+    sf,
+    sp,
+    stars,
+    stats,
+    stringr,
+    terra,
+    terrainr,
+    tidyterra,
+    viridis
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+RoxygenNote: 7.2.1

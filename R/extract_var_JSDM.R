@@ -1,18 +1,19 @@
-extract_var_JSDM <- function(stars_object, variables_names, power_variable = rep(1, length(variables_names)), 
+extract_var_JSDM <- function(stars_object, variables_names, power_variable = rep(1, length(variables_names)),
                              scale = rep(TRUE, length(variables_names))){
-  #' Extract layers and create power wanted of each variable 
-  #' 
+  #' Extract layers and create power wanted of each variable
+  #'
   #' @param stars_object stars object. output of "read_stars" of "stars" library with layer's names.
   #' @param variables_names a character vector. of layer's name needed
-  #' @param power_variable int vector same length then `variables_names` . maximal power needed for each variable 
+  #' @param power_variable int vector same length then `variables_names` . maximal power needed for each variable
   #' @param scale boolean vector same length then `variables_names` . scale variables and its power
   #' @return stars object with only variables and power asked.
-  #' 
+  #'
   #' @import stars
-  
+  #' @export
+
   if( length(variables_names) != length(power_variable)){
     print("variables_names length is different then power_variable length")
-    break
+    stop()
   }
   if (length(names(st_dimensions(stars_object))) != 2){
     stars_object <- split(stars_object)
@@ -39,6 +40,6 @@ extract_var_JSDM <- function(stars_object, variables_names, power_variable = rep
       stars_output <- split(stars_output)
     }
   }
-  
+
   return(stars_output)
 }

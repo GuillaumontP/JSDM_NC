@@ -8,20 +8,21 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
   #' @param display_plot boolean. Show plot, default is TRUE.
   #' @param save_plot boolean. Save plots in plot folder with png format.
   #' @return float matrix. with as much row as number of pixels and 3 columns for tSNE algorithm and as columns as number of axis with more than 1% of explained variance for PCA.
-  #' 
-  #' @import Rtnse
+  #'
+  #' @import Rtsne
   #' @import stars
   #' @import ggplot2
   #' @import ade4
   #' @import factoextra
-  
+  #' @export
+
   if (tSNE * PCA){
     print("Chose only one among tSNE and PCA")
-    break
+    stop()
   }
   cell <- which(!is.na(split(read_stars(list_theta_path[1]))[[1]]), arr.ind = TRUE)[, 1:2] # keep only x & y axis
   matrix_values <- NULL
-  for (i in list_theta_path) { 
+  for (i in list_theta_path) {
     # create matrix with probabilities for all species on each pixels
     matrix_values <- cbind(matrix_values, values(rast(i), na.rm = TRUE))
   }
@@ -46,7 +47,7 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
       ggsave(here("plot", "tSNE_axis2_axis3.png"), plot = axis2_3)
     }
   }
-  
+
   if (PCA){
     if (!is.null(var_exp_stars)){
       if (length(var_exp_stars) != 1){
@@ -61,24 +62,24 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
     dist_pixel <- dist(get_pca_ind(pca_with_env)$coord, method = "euclidian")
     pixel_df <- get_pca_ind(pca_with_env)$coord[, 1: which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])]
     exp_variances <- fviz_eig(pca_with_env)
-    PCA_1_2 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE, 
+    PCA_1_2 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE,
                                col.quanti.sup = "black", invisible = "var", pointshape = 21, labelsize = 7, axes = c(1, 2),
                                col.ind = "NA", alpha = 0.8) +
       ggtitle("PCA on pixels with explanatories variables in sup") +
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-    PCA_2_3 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE, 
+    PCA_2_3 <- fviz_pca_biplot(pca_with_env, choix = "ind", label = c("quali", "quanti.sup"), fill.ind = "orange", repel = TRUE,
                                col.quanti.sup = "black", invisible = "var", pointshape = 21, labelsize = 7, axes = c(2, 3),
                                col.ind = "NA", alpha = 0.8) +
       ggtitle("PCA on pixels with explanatories variables in sup") +
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
-    
+
     if (display_plot){
       print(exp_variances)
       print(paste0("Explained variances by first ", which.min(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1]),
-                   " axis : ", 
-                   round(sum(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])), 
+                   " axis : ",
+                   round(sum(fviz_eig(pca_with_env)$data[,2][fviz_eig(pca_with_env)$data[,2] > 1])),
                    "%"))
       print(PCA_1_2)
       print(PCA_2_3)
@@ -89,16 +90,16 @@ PCA_or_tSNE_on_pro_pres_est <- function(tSNE = TRUE, PCA = FALSE, list_theta_pat
       ggsave(here("plot", "PCA_with_environ_sup_axis_1_2.png"), plot = PCA_2_3)
     }
   }
-  
+
   # Plot CAH for choosen method
   if (display_plot){
-    plot(hclust(dist_pixel), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
+    plot(hclust(dist_pixel), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none")
   }
   if (save_plot){
     method = c(PCA, tSNE)
     names(method) <- c("PCA", "tSNE")
     png(here("plot", paste0("dendro_", names(method)[max(method)], ".png")))
-    plot(hclust(dist_pixel), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none") 
+    plot(hclust(dist_pixel), labels = FALSE, main = "", xlab = "", ylab = "", sub = "", ylim = "none")
     dev.off()
   }
   return(pixel_df)

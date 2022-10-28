@@ -7,17 +7,21 @@ plot_HCA_EM_Kmeans <- function(method = "KM", pixel_df, nb_group, display_plot_3
   #' @param display_plot_3d boolean. Display new window with 3d plot, default is FALSE.
   #' @param display_plot_2d boolean. Display 2d plots, default is TRUE.
   #' @param save_plot_2d boolean. Save in plot folder as .png file all 2d plots, default is FALSE.
-  #' @return int vector. Group number for each pixel.  
+  #' @return int vector. Group number for each pixel.
   #' @details `method` values are HCA : Hierarchical Cluster Analysis; EM : Expectation Maximisation; KM : K-means algorithm
-  #' 
+  #'
   #' @import EMCluster
   #' @import ggplot2
   #' @import viridis
   #' @import rgl
-  
+  #' @import stats
+  #' @import factoextra
+  #'
+  #' @export
+
   if (nb_group == 1){
     print("Please select more than 1 group")
-    break
+    stop()
   }
   if (method == "KM"){
     KM_class <- kmeans(pixel_df, centers = nb_group, iter.max = 20, nstart = 1000)

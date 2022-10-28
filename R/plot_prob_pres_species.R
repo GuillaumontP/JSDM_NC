@@ -1,22 +1,23 @@
-plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_stars)[1], country_name = NULL, 
+plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_stars)[1], country_name = NULL,
                                   country_sf = NULL, display_plot = TRUE, save_plot = FALSE){
   #' Create plot with probabilities of presence interpolated for a choosen species. Plot can be hide and/or save in plot folder
-  #' 
+  #'
   #' @param theta_stars multilayer stars_object. from files save in prob_est_species_forest function.
   #' @param species_to_plot character. name of one layer of `theta_stars`, default is first one.
   #' @param country_name character. optional, for display border of country on map, default is NULL.
   #' @param country_sf sf object. optional, inconsistent with `country_name`. Display borders on map, default is NULL.
   #' @param display_plot boolean. Display plot, default is TRUE.
   #' @param save_plot boolean. Save plot in .png format in folder plot, default is FALSE.
-  #' 
+  #'
   #' @import rnaturalearth
   #' @import stars
   #' @import ggplot2
   #' @import viridis
-  
+  #' @export
+
   if (!is.null(country_name) & !is.null(country_sf)){
     print("Only country_name or country_sf")
-    break
+    stop()
   }
   if(!is.null(country_name)){
     map <- ne_countries(scale = 10, returnclass = "sf", country = country_name)[1]
@@ -33,7 +34,7 @@ plot_prob_pres_interp <- function(theta_stars, species_to_plot = names(theta_sta
     }
     theta_stars <- split(theta_stars)
   }
-  gplot <- ggplot() + 
+  gplot <- ggplot() +
     geom_sf(data = map, colour = "black", fill = "grey") +
     geom_stars(data = theta_stars[species_to_plot,,]) +
     ggtitle(paste('Interpolated current probabilities of presence \n for', species_to_plot)) +
