@@ -37,6 +37,7 @@ Imports:
     rnaturalearthhires,
     Rtsne,
     sf,
+    shiny,
     sp,
     stars,
     stats,

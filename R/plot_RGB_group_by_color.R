@@ -15,6 +15,7 @@ plot_RGB_group_by_color <- function(stars_pixels_group, coord_pixel, country_nam
   #' @import rnaturalearth
   #' @import RColorBrewer
   #' @import gridExtra
+  #' @importFrom cowplot save_plot
   #' @importFrom grid textGrob gpar
   #' @export
 

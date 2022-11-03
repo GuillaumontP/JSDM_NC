@@ -87,7 +87,10 @@ prob_est_species_forest <- function(alpha_stars, latent_var_stars, jSDM_binom_pr
 
   first.species <- seq(1, n_species, by = floor(n_species / npart) + 1)
   for (n in 1:npart){
-    probit_theta <- predfun(data_stars, params_species, alpha_stars, latent_var_stars,
+    probit_theta <- predfun(data_stars = data_stars,
+                            params_species = params_species,
+                            alpha_stars = alpha_stars,
+                            latent_var_stars = latent_var_stars,
                             species.range = c(first.species[n], min(n_species, first.species[n] + floor(n_species / npart))))
     theta <- merge(probit_theta)
     for (j in 1:length(split(theta))) {

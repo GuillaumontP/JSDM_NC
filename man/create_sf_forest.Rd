@@ -19,9 +19,9 @@ create_sf_forest(
 
 \item{percentage_min}{int. percentage minimal of forest to consider pixels as forest, default 50}
 
-\item{elevation}{stars object. output of "read_stars" of "stars" library with elevation in meters}
+\item{elevation}{terra object. output of "rast" of "terra" library with elevation in meters}
 
-\item{forest}{stars object. output of "read_stars" of "stars" library with percentage of forest}
+\item{forest}{terra object. output of "rast" of "terra" library with percentage of forest}
 }
 \value{
 sf object. with only forest higher than `altitude_min` & `percentage_min`

@@ -2,18 +2,20 @@
 % Please edit documentation in R/reproject_sf_stars.R
 \name{reproject_sf_stars}
 \alias{reproject_sf_stars}
-\title{Reproject shapefile with right EPSG}
+\title{Reproject shapefile, stars or terra object with right EPSG}
 \usage{
-reproject_sf_stars(EPSG = 3163, sf_stars_object)
+reproject_sf_stars(EPSG = 3163, sf_stars_object = NULL, terra_object = NULL)
 }
 \arguments{
 \item{EPSG}{target EPSG, default 3163}
 
 \item{sf_stars_object}{sf or stars object to reproject}
+
+\item{terra_object}{terra object to reproject}
 }
 \value{
-same object then  `sf_stars_object` with `EPSG` projection
+return same type then input with `EPSG` projection
 }
 \description{
-Reproject shapefile with right EPSG
+Only one variable between, `sf_stars_object` and `terra_object`.
 }
