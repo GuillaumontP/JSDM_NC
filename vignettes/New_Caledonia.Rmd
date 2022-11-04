@@ -178,6 +178,10 @@ coord_PCA_or_tSNE <- PCA_or_tSNE_on_pro_pres_est(tSNE = TRUE,
                                                  save_plot = TRUE)
 ```
 
+```{r plot_dendro, echo = FALSE, out.width = 600, eval = TRUE}
+knitr::include_graphics("plot/dendro_PCA.png")
+```
+
 ## Clustering 
 
 Pixel's clustering is computing with a method among HCA, kmeans or Expectation-Maximisation (EM).
@@ -218,6 +222,11 @@ max_min_df <- max_min_species_group(list_theta_path = list.files(here("output", 
                                     stars_pixels_group = pixels_group, 
                                     nb_top_species = 20,
                                     save_csv = TRUE)
+```
+
+```{r plot_col, echo = FALSE, out.width = 800, eval = TRUE}
+knitr::include_graphics("plot/RGB.png")
+knitr::include_graphics("plot/color_group.png")
 ```
 
 ## Sensibility & Specificity
